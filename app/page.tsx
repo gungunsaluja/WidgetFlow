@@ -5,10 +5,19 @@ interface WidgetProps {
   id: string;
   data: any;
   onRemove: (id: string) => void;
+  onDragStart: (e: React.DragEvent, id: string) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent, id: string) => void;
 }
 
-const ChartWidget: React.FC<WidgetProps> = ({ id, data, onRemove }) => (
-  <div className="bg-white border border-gray-200 p-4 relative">
+const ChartWidget: React.FC<WidgetProps> = ({ id, data, onRemove, onDragStart, onDragOver, onDrop }) => (
+  <div 
+    className="bg-white border border-gray-200 p-4 relative cursor-move"
+    draggable
+    onDragStart={(e) => onDragStart(e, id)}
+    onDragOver={onDragOver}
+    onDrop={(e) => onDrop(e, id)}
+  >
     <button
       onClick={() => onRemove(id)}
       className="absolute top-2 right-2 text-gray-400 hover:text-red-600"
@@ -19,8 +28,14 @@ const ChartWidget: React.FC<WidgetProps> = ({ id, data, onRemove }) => (
   </div>
 );
 
-const TaskListWidget: React.FC<WidgetProps> = ({ id, data, onRemove }) => (
-  <div className="bg-white border border-gray-200 p-4 relative text-gray-800">
+const TaskListWidget: React.FC<WidgetProps> = ({ id, data, onRemove, onDragStart, onDragOver, onDrop }) => (
+  <div 
+    className="bg-white border border-gray-200 p-4 relative text-gray-800 cursor-move"
+    draggable
+    onDragStart={(e) => onDragStart(e, id)}
+    onDragOver={onDragOver}
+    onDrop={(e) => onDrop(e, id)}
+  >
     <button
       onClick={() => onRemove(id)}
       className="absolute top-2 right-2 text-gray-400 hover:text-red-600"
@@ -36,8 +51,14 @@ const TaskListWidget: React.FC<WidgetProps> = ({ id, data, onRemove }) => (
   </div>
 );
 
-const InfoPanel: React.FC<WidgetProps> = ({ id, data, onRemove }) => (
-  <div className="bg-white border border-gray-200 p-4 relative text-gray-800">
+const InfoPanel: React.FC<WidgetProps> = ({ id, data, onRemove, onDragStart, onDragOver, onDrop }) => (
+  <div 
+    className="bg-white border border-gray-200 p-4 relative text-gray-800 cursor-move"
+    draggable
+    onDragStart={(e) => onDragStart(e, id)}
+    onDragOver={onDragOver}
+    onDrop={(e) => onDrop(e, id)}
+  >
     <button
       onClick={() => onRemove(id)}
       className="absolute top-2 right-2 text-gray-400 hover:text-red-600"
@@ -75,6 +96,7 @@ interface Widget {
 const Dashboard: React.FC = () => {
   const [widgets, setWidgets] = useState<Widget[]>(initialConfig);
   const [idCounter, setIdCounter] = useState(3);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
 
   const addWidget = (type: keyof typeof widgetComponents) => {
     const newWidget: Widget = {
@@ -88,6 +110,34 @@ const Dashboard: React.FC = () => {
 
   const removeWidget = (id: string) => {
     setWidgets(widgets.filter(widget => widget.id !== id));
+  };
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropTargetId: string) => {
+    e.preventDefault();
+    
+    if (!draggedId || draggedId === dropTargetId) return;
+
+    const draggedIndex = widgets.findIndex(w => w.id === draggedId);
+    const targetIndex = widgets.findIndex(w => w.id === dropTargetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const newWidgets = [...widgets];
+    const [draggedWidget] = newWidgets.splice(draggedIndex, 1);
+    newWidgets.splice(targetIndex, 0, draggedWidget);
+
+    setWidgets(newWidgets);
+    setDraggedId(null);
   };
 
   return (
@@ -132,6 +182,9 @@ const Dashboard: React.FC = () => {
                   id={widget.id}
                   data={widget.data}
                   onRemove={removeWidget}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
                 />
               );
             })
